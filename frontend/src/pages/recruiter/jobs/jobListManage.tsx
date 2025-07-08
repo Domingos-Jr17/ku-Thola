@@ -20,7 +20,7 @@ interface JobListItemProps {
   hideCandidateAccess?: boolean;
 }
 
-export const JobListItem: React.FC<JobListItemProps> = ({
+export const JobListManage: React.FC<JobListItemProps> = ({
   job,
   onDelete,
   onEdit,

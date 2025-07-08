@@ -13,18 +13,29 @@ export const EvaluationsList = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Avaliações filtradas conforme busca
   const filtered = useMemo(() => filterEvaluations(search), [filterEvaluations, search]);
 
+  // Paginação dos resultados filtrados
   const paginated = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
     return filtered.slice(start, start + itemsPerPage);
   }, [page, filtered]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
 
+  // Busca o título da vaga pelo jobId
   const getJobTitle = (jobId: string) => {
     const job = jobs.find((j) => j._id === jobId);
-    return job ? job.title : "Vaga desconhecida";
+    return job?.title ?? "Vaga desconhecida";
+  };
+
+  // Navegação via teclado (Enter) para acessibilidade
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, candidateId: string) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      navigate(`/rh/candidato/${candidateId}`);
+    }
   };
 
   return (
@@ -32,7 +43,7 @@ export const EvaluationsList = () => {
       <h1 className="text-2xl font-bold mb-6">Lista de Avaliações</h1>
 
       <input
-        type="text"
+        type="search"
         placeholder="Buscar candidato, email ou avaliação..."
         className="mb-4 px-3 py-2 border rounded w-full max-w-md"
         value={search}
@@ -62,26 +73,24 @@ export const EvaluationsList = () => {
               </td>
             </tr>
           ) : (
-            paginated.map((evalItem) => (
+            paginated.map(({ id, candidateId, candidateName, email, jobId, status, technical, behavioral }) => (
               <tr
-                key={evalItem.id}
+                key={id}
                 className="border-b hover:bg-gray-50 cursor-pointer"
-                onClick={() => navigate(`/rh/candidato/${evalItem.candidateId}`)}
                 tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") navigate(`/rh/candidato/${evalItem.candidateId}`);
-                }}
+                role="button"
+                onClick={() => navigate(`/rh/candidato/${candidateId}`)}
+                onKeyDown={(e) => handleKeyDown(e, candidateId)}
+                aria-label={`Ver detalhes da avaliação do candidato ${candidateName}`}
               >
-                <td className="px-4 py-2 font-medium text-gray-800">{evalItem.candidateName}</td>
-                <td className="px-4 py-2 text-blue-600 underline">{evalItem.email}</td>
-                <td className="px-4 py-2">{getJobTitle(evalItem.jobId)}</td>
+                <td className="px-4 py-2 font-medium text-gray-800">{candidateName}</td>
+                <td className="px-4 py-2 text-blue-600 underline">{email}</td>
+                <td className="px-4 py-2">{getJobTitle(jobId)}</td>
                 <td className="px-4 py-2">
-                  <StatusBadge
-                    status={evalItem.status === "Aprovado" ? "approved" : "rejected"}
-                  />
+                  <StatusBadge status={status === "Aprovado" ? "approved" : "rejected"} />
                 </td>
-                <td className="px-4 py-2 text-sm text-gray-700">{evalItem.technical}</td>
-                <td className="px-4 py-2 text-sm text-gray-700">{evalItem.behavioral}</td>
+                <td className="px-4 py-2 text-sm text-gray-700">{technical}</td>
+                <td className="px-4 py-2 text-sm text-gray-700">{behavioral}</td>
               </tr>
             ))
           )}
@@ -89,17 +98,18 @@ export const EvaluationsList = () => {
       </table>
 
       {/* Paginação */}
-      <div className="mt-4 flex justify-center gap-2">
+      <div className="mt-4 flex justify-center gap-2" role="navigation" aria-label="Paginação de avaliações">
         <button
           className="px-3 py-1 border rounded disabled:opacity-50"
           disabled={page === 1}
           onClick={() => setPage((p) => Math.max(p - 1, 1))}
           aria-label="Página anterior"
+          type="button"
         >
           ‹
         </button>
 
-        <span className="px-3 py-1 border rounded bg-gray-100">
+        <span className="px-3 py-1 border rounded bg-gray-100" aria-live="polite" aria-atomic="true">
           Página {page} de {totalPages}
         </span>
 
@@ -108,6 +118,7 @@ export const EvaluationsList = () => {
           disabled={page === totalPages || totalPages === 0}
           onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
           aria-label="Próxima página"
+          type="button"
         >
           ›
         </button>

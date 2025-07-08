@@ -1,6 +1,13 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, type ReactNode } from "react";
 
-// Tipo do candidato
+// 🧩 Tipos
+export type Feedback = {
+  date: string;
+  comment: string;
+  skills: string[];
+};
+
 export type Candidate = {
   id: string;
   name: string;
@@ -10,30 +17,22 @@ export type Candidate = {
   resumeLink: string;
   notes: string;
   compatibilityScore: number;
-    skills: string[];
-  feedbacks?: {
-    date: string;
-    comment: string;
-    skills: string[];
-  }[];
+  skills: string[];
+  feedbacks?: Feedback[];
 };
 
-// Tipagem do contexto
-  export type CandidateContextType = {
+export type CandidateContextType = {
   candidates: Candidate[];
   addCandidate: (candidate: Candidate) => void;
   updateCandidate: (id: string, data: Partial<Candidate>) => void;
   removeCandidate: (id: string) => void;
 };
 
-// Criação do contexto
-// eslint-disable-next-line react-refresh/only-export-components
+// 🔌 Criação do Contexto
 export const CandidateContext = createContext<CandidateContextType | undefined>(undefined);
 
-// Componente Provider
-export const CandidateProvider = ({ children }: { children: ReactNode }) => {
-  const [candidates, setCandidates] = useState<Candidate[]>([
-
+// 📦 Dados Mock
+const initialCandidates: Candidate[] = [
   {
     id: "1",
     name: "Albertina Dlambe",
@@ -178,15 +177,16 @@ export const CandidateProvider = ({ children }: { children: ReactNode }) => {
     skills: ["Node.js", "Express", "PostgreSQL", "TypeScript"],
     feedbacks: [],
   },
-]);
+];
 
+// ✅ Provider
+export const CandidateProvider = ({ children }: { children: ReactNode }) => {
+  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
 
-  // Adicionar um novo candidato
   const addCandidate = (candidate: Candidate) => {
     setCandidates(prev => [...prev, candidate]);
   };
 
-  // Atualizar dados de um candidato existente
   const updateCandidate = (id: string, data: Partial<Candidate>) => {
     setCandidates(prev =>
       prev.map(candidate =>
@@ -195,17 +195,15 @@ export const CandidateProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  // Remover um candidato pelo id
   const removeCandidate = (id: string) => {
     setCandidates(prev => prev.filter(candidate => candidate.id !== id));
   };
 
   return (
-    <CandidateContext.Provider value={{ candidates, addCandidate, updateCandidate, removeCandidate }}>
+    <CandidateContext.Provider
+      value={{ candidates, addCandidate, updateCandidate, removeCandidate }}
+    >
       {children}
     </CandidateContext.Provider>
   );
 };
-
-
-

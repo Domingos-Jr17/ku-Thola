@@ -1,30 +1,81 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
-import { useNavigate } from "react-router-dom";
+import { JobMatchingScore } from "@/components/cards/JobMatchingScore";
+import { useJobContext } from "@/hooks/useJobContext";
 
-interface Props {
-  candidate: {
-    id: string;
-    nome: string;
-    status: string;
-    avaliado: boolean;
-  };
-  onAvaliar: () => void;
-  onAgendar: () => void;
+interface Candidate {
+  id: string;
+  nome: string;
+  status: string;
+  avaliado: boolean;
+  email?: string;
+  skills?: string[];
+  scoreCompatibilidade?: number;
 }
 
-export const CandidateCard: React.FC<Props> = ({ candidate, onAvaliar, onAgendar }) => {
+interface CandidateCardProps {
+  candidate: Candidate;
+  jobRequirements: string[];
+  onAvaliar?: () => void;
+  onAgendar?: () => void;
+  onVerPerfil?: () => void;
+}
+
+export const CandidateCard: React.FC<CandidateCardProps> = ({
+  candidate,
+  jobRequirements,
+  onAvaliar,
+  onAgendar,
+  onVerPerfil,
+}) => {
   const navigate = useNavigate();
+  const { id: jobId } = useParams<{ id: string }>();
+  const { atualizarScoreCompatibilidade } = useJobContext();
+
+  // Calcula a compatibilidade
+  const compatibilityScore = useMemo(() => {
+    if (!candidate.skills || jobRequirements.length === 0) return 0;
+
+    const normalizedSkills = candidate.skills.map((s) => s.toLowerCase());
+    const matched = jobRequirements.filter((req) =>
+      normalizedSkills.includes(req.toLowerCase())
+    );
+    return Math.round((matched.length / jobRequirements.length) * 100);
+  }, [candidate.skills, jobRequirements]);
+
+  // Salva no contexto ao montar ou quando o score mudar
+  useEffect(() => {
+    if (jobId) {
+      atualizarScoreCompatibilidade(jobId, candidate.id, compatibilityScore);
+    }
+  }, [jobId, candidate.id, compatibilityScore, atualizarScoreCompatibilidade]);
+
+  const handleVerPerfil = () => {
+    if (onVerPerfil) return onVerPerfil();
+    if (jobId) navigate(`/rh/vaga/${jobId}/candidato/${candidate.id}`);
+    else navigate(`/rh/candidato/${candidate.id}`);
+  };
 
   return (
-    <li className="bg-gray-50 p-4 rounded shadow flex justify-between items-center">
-      <div>
-        <h3 className="font-semibold text-lg">{candidate.nome}</h3>
-        <p>Status: {candidate.status}</p>
-        <p>Avaliado: {candidate.avaliado ? "Sim" : "Não"}</p>
+    <li className="bg-gray-50 p-4 rounded shadow flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 flex-1 min-w-0">
+        <div>
+          <h3 className="font-semibold text-lg truncate">{candidate.nome}</h3>
+          <p className="text-sm">Status: {candidate.status}</p>
+          <p className="text-sm">Avaliado: {candidate.avaliado ? "Sim" : "Não"}</p>
+        </div>
+
+        <div className="min-w-[120px]">
+          <JobMatchingScore
+            jobRequirements={jobRequirements}
+            candidateSkills={candidate.skills || []}
+          />
+        </div>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={() => navigate(`/rh/candidato/${candidate.id}`)}>
+
+      <div className="flex gap-2 flex-wrap">
+        <Button variant="outline" onClick={handleVerPerfil}>
           Ver Perfil
         </Button>
 

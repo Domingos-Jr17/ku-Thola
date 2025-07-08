@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 
 import  { createContext, useState, type ReactNode } from "react";
 
@@ -52,6 +53,4 @@ export const InterviewProvider = ({ children }: { children: ReactNode }) => {
     </InterviewContext.Provider>
   );
 };
-
-// eslint-disable-next-line react-refresh/only-export-components
 

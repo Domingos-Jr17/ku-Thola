@@ -38,14 +38,16 @@ import { CandidateInterview } from "../pages/recruiter/process/CandidateIntervie
 import { CandidateCommunication } from "../pages/recruiter/comunications/CandidateCommunication";
 import { CandidateNotificationsRh } from "../pages/recruiter/comunications/CandidateNotifications";
 import { JobHistory } from "../pages/recruiter/jobs/JobHistory";
-import { JobMatching } from "../pages/recruiter/jobs/JobMatching";
+//import { JobMatchingScore } from "@/components/cards/JobMatchingScore";
 import { Messages } from "../pages/recruiter/comunications/Messages";
 import { Reports } from "../pages/recruiter/reports/Reports";
 import { RecruiterProfile } from "../pages/recruiter/profile/RecruiterProfile";
 import { ScheduledInterviews } from "../pages/recruiter/process/ScheduledInterviews";
 import { JobDetailsPage } from "../pages/recruiter/jobs/JobDetailsPage1";
 import { SettingsPage } from "@/pages/recruiter/profile/Settings";
-import { CandidateProfileRh } from "@/pages/recruiter/rh/CandidateProfilerh";
+import { CandidateProfileRh } from "@/pages/recruiter/candidateProfile/CandidateProfilerh";
+import { JobListItem } from "@/pages/recruiter/jobs/JobListitem";
+//import { JobListItem } from "@/pages/recruiter/jobs/JobListItem";
 
 export function AppRoutes() {
   return (
@@ -99,14 +101,15 @@ export function AppRoutes() {
           <Route path="avaliacoes" element={<EvaluationsList />} />
           <Route path="historico" element={<JobHistory />} />
           <Route path="entrevistas" element={<ScheduledInterviews />} />
-          <Route path="vagas/:id" element={<JobDetailsPage />} />
+          <Route path="vagas/:id/candidaturas" element={<JobDetailsPage />} />
+           <Route path="Candidatos/por-vaga" element={<JobListItem />} />
         
 
           {/* Job Matching */}
-          <Route path="job-matching/:id" element={<JobMatching />} />
+        {/* <Route path="job-matching/:id" element={<JobMatching />} /> */}
 
           {/* Sub-rotas agrupadas do candidato */}
-          <Route path="candidato/:id">
+          <Route path="vaga/:jobId/candidato/:candidateId">
             <Route index element={<CandidateProfileRh />} />
             <Route path="avaliacao" element={<CandidateEvaluation />} />
             <Route path="feedback" element={<FinalFeedback />} />

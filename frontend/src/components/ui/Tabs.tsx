@@ -1,5 +1,3 @@
-// components/ui/Tabs.tsx
-
 import {
   createContext,
   useContext,

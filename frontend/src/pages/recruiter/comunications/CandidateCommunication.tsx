@@ -1,17 +1,22 @@
-import { useState, type SetStateAction } from "react";
+import React, { useState } from "react";
 import { InputGroup } from "@/components/ui/InputGroup";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle, XCircle } from "lucide-react";
 
+type StatusEnvio = 
+  | { type: "success"; message: string }
+  | { type: "error"; message: string }
+  | null;
+
 export const CandidateCommunication = () => {
   const [mensagem, setMensagem] = useState("");
   const [email, setEmail] = useState("");
-  const [via, setVia] = useState("email");
-  const [statusEnvio, setStatusEnvio] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [via, setVia] = useState<"email" | "sms" | "whatsapp">("email");
+  const [statusEnvio, setStatusEnvio] = useState<StatusEnvio>(null);
   const [loading, setLoading] = useState(false);
 
   const handleEnviar = () => {
-    if (!mensagem || !email) {
+    if (!mensagem.trim() || !email.trim()) {
       setStatusEnvio({ type: "error", message: "Preencha todos os campos." });
       return;
     }
@@ -19,11 +24,11 @@ export const CandidateCommunication = () => {
     setLoading(true);
     setStatusEnvio(null);
 
-    // Simula envio
+    // Simulação de envio
     setTimeout(() => {
       setStatusEnvio({
         type: "success",
-        message: `Mensagem enviada via ${via.toUpperCase()} para ${email}`,
+        message: `Mensagem enviada via ${via.toUpperCase()} para ${email.trim()}`,
       });
       setMensagem("");
       setEmail("");
@@ -41,7 +46,7 @@ export const CandidateCommunication = () => {
           id="email"
           type="text"
           value={email}
-          onChange={(e: { target: { value: SetStateAction<string>; }; }) => setEmail(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
           placeholder="ex: candidato@email.com ou 82xxxxxxx"
           required
         />
@@ -53,7 +58,7 @@ export const CandidateCommunication = () => {
           <select
             id="via"
             value={via}
-            onChange={(e) => setVia(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVia(e.target.value as "email" | "sms" | "whatsapp")}
             className="w-full border border-gray-300 rounded px-4 py-2"
           >
             <option value="email">Email</option>
@@ -66,7 +71,7 @@ export const CandidateCommunication = () => {
           label="Mensagem"
           id="mensagem"
           value={mensagem}
-          onChange={(e: { target: { value: SetStateAction<string>; }; }) => setMensagem(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMensagem(e.target.value)}
           placeholder="Escreva sua mensagem aqui"
           textarea
           rows={5}
@@ -81,6 +86,7 @@ export const CandidateCommunication = () => {
 
         {statusEnvio && (
           <div
+            role="alert"
             className={`flex items-center gap-2 text-sm px-4 py-2 rounded ${
               statusEnvio.type === "success"
                 ? "bg-green-100 text-green-700"

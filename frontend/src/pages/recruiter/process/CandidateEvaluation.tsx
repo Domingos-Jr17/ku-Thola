@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { FeedbackModal } from '@/components/ui/FeedbackModal';
-import { EvaluationForm } from '@/components/cards/forms/EvaluationForm';
-
+import { useState, useContext } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { JobContext } from "@/context/jobsContext";
+import { FeedbackModal } from "@/components/ui/FeedbackModal";
+import { EvaluationForm } from "@/components/cards/forms/EvaluationForm";
 
 interface EvaluationData {
   technical: number;
@@ -13,23 +13,36 @@ interface EvaluationData {
 
 export const CandidateEvaluation = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { jobId, candidateId } = useParams<{ jobId: string; candidateId: string }>();
+  const jobContext = useContext(JobContext);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  if (!jobContext) {
+    return <p className="p-6 text-red-600">Contexto de vagas não disponível.</p>;
+  }
+
+  const { avaliarCandidatoDetalhado, getJobById } = jobContext;
+
+  const job = getJobById(jobId);
+  const candidate = job?.candidatos.find(c => c.id === candidateId);
+
   const handleSubmit = async (data: EvaluationData) => {
+    if (!jobId || !candidateId) {
+      setError("Dados insuficientes para realizar avaliação.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    try {
-      // Simule envio para API ou contexto
-      // await avaliarCandidatoDetalhado(id, data);
-      console.log('Dados de avaliação:', data);
 
+    try {
+      avaliarCandidatoDetalhado(jobId, candidateId, data);
       setModalOpen(true);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
-      setError('Falha ao salvar avaliação. Tente novamente.');
+    } catch {
+      setError("Falha ao salvar avaliação. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -37,8 +50,19 @@ export const CandidateEvaluation = () => {
 
   const confirmAndNavigate = () => {
     setModalOpen(false);
-    if (id) navigate(`/rh/candidato/${id}/feedback`);
+    navigate(`/rh/candidato/${candidateId}/feedback`);
   };
+
+  if (!candidate) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600 font-bold">Candidato não encontrado.</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-blue-600 underline">
+          Voltar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -46,13 +70,13 @@ export const CandidateEvaluation = () => {
         <div className="max-w-3xl mx-auto bg-white rounded shadow p-6">
           <button
             type="button"
-            onClick={() => id && navigate(`/rh/candidato/${id}`)}
+            onClick={() => navigate(`/rh/candidato/${candidateId}`)}
             className="mb-4 text-blue-600 hover:underline"
           >
             ← Voltar para perfil do candidato
           </button>
 
-          <h1 className="text-2xl font-semibold mb-6">Avaliação do Candidato</h1>
+          <h1 className="text-2xl font-semibold mb-6">Avaliação do Candidato: {candidate.nome}</h1>
 
           {error && <p className="text-red-600 mb-4">{error}</p>}
 

@@ -1,56 +1,53 @@
-// utils/calculateCandidateScores.ts
-
-export interface Candidato {
-  id: string;
-  nome: string;
-  skills?: string[];
-  avaliado?: boolean;
-}
-
-export interface Entrevista {
-  candidateId: string;
-}
-
-export interface Vaga {
-  title: string;
-  requirements: string[];
-  candidatos: Candidato[];
-  entrevistas?: Entrevista[];
-}
-
-export interface Resultado {
+export type Candidate = {
   id: string;
   name: string;
-  score: number;
-  notes: string;
-}
+  skills: string[];
+  experienceYears: number;
+  // outras propriedades...
+};
 
-export function calculateCandidateScores(job: Vaga): Resultado[] {
-  const requisitos = Array.isArray(job.requirements)
-    ? job.requirements.map((r) => r.toLowerCase().trim())
-    : [];
+export type Job = {
+  requiredSkills: string[];
+  minimumExperience: number;
+  // outras propriedades...
+};
 
-  return job.candidatos.map((cand) => {
+export type CandidateScore = Candidate & {
+  score: number;          // 0 a 100 (por exemplo)
+  status: "Aceito" | "Rejeitado" | "Em análise";
+};
+
+export function calculateCandidateScores(
+  candidates: Candidate[],
+  job: Job
+): CandidateScore[] {
+  return candidates.map(candidate => {
     let score = 0;
-    const skills = (cand.skills || []).map((s) => s.toLowerCase().trim());
 
-    const matching = requisitos.filter((req) => skills.includes(req)).length;
-    score += matching * 1.5;
+    // Exemplo de cálculo simples:
+    // Pontuação por skills
+    const matchingSkills = candidate.skills.filter(skill =>
+      job.requiredSkills.includes(skill)
+    );
+    const skillScore = (matchingSkills.length / job.requiredSkills.length) * 70;
 
-    if (cand.avaliado) score += 2;
+    // Pontuação por experiência
+    const experienceScore = Math.min(
+      (candidate.experienceYears / job.minimumExperience) * 30,
+      30
+    );
 
-    const temEntrevista = job.entrevistas?.some((e) => e.candidateId === cand.id);
-    if (temEntrevista) score += 3;
+    score = skillScore + experienceScore;
 
-    const notes = `Matching: ${matching}/${requisitos.length}. Avaliado: ${
-      cand.avaliado ? "Sim" : "Não"
-    }.`;
+    // Determinar status baseado na pontuação
+    let status: CandidateScore["status"] = "Em análise";
+    if (score >= 80) status = "Aceito";
+    else if (score < 50) status = "Rejeitado";
 
     return {
-      id: cand.id,
-      name: cand.nome,
-      score: Number(score.toFixed(1)),
-      notes,
+      ...candidate,
+      score,
+      status,
     };
-  }).sort((a, b) => b.score - a.score);
+  });
 }

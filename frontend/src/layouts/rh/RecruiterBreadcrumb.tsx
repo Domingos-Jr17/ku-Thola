@@ -26,7 +26,7 @@ export const RecruiterBreadcrumb = () => {
   return (
     <nav className="text-sm text-gray-600 space-x-2">
       <Link to="/rh/dashboard" className="hover:text-blue-600">
-        Início
+        Início /
       </Link>
       {parts.map((part, index) => {
         const route = "/" + parts.slice(0, index + 1).join("/");

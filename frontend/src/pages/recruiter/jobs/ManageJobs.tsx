@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { InputGroup } from "@/components/ui/InputGroup";
-import { JobListItem } from "./jobListItem2";
+import { JobListManage } from "./jobListManage";
 import { useJobList } from "@/hooks/useJobList";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/pagination";
@@ -14,6 +14,8 @@ import { Modal } from "@/components/ui/Modal";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { PlusCircle, XCircle, Edit, Copy, Trash2 } from "lucide-react";
 
+import { useSearchParams, useNavigate } from "react-router-dom";
+
 import type { Job } from "@/context/jobsContext";
 
 const items_per_page = 5;
@@ -22,7 +24,35 @@ type ConfirmActionType = "delete" | "edit" | "duplicate" | null;
 export const ManageJobs = () => {
   const { jobs, removeJob, updateJob } = useJobList();
 
-  const [tab, setTab] = useState("listagem");
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Estado da aba, inicializado a partir do parâmetro 'tab' na URL, padrão 'listagem'
+  const [tab, setTab] = useState(() => searchParams.get("tab") || "listagem");
+
+  // Sincroniza o estado 'tab' sempre que o parâmetro na URL muda
+  useEffect(() => {
+    const currentTab = searchParams.get("tab") || "listagem";
+    setTab(currentTab);
+  }, [searchParams]);
+
+  // Atualiza a URL e o estado da aba quando usuário troca de aba
+  const handleTabChange = (newTab: string) => {
+    setTab(newTab);
+
+    const params = new URLSearchParams(window.location.search);
+
+    // Remove o parâmetro 'tab' da URL se for a aba padrão, para manter URL limpa
+    if (newTab === "listagem") {
+      params.delete("tab");
+    } else {
+      params.set("tab", newTab);
+    }
+
+    // Navega para URL atualizada com novo parâmetro
+    navigate({ pathname: "/rh/vagas", search: params.toString() }, { replace: true });
+  };
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"todas" | "aberta" | "fechada" | "rascunho">("todas");
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,7 +89,6 @@ export const ManageJobs = () => {
     const originalJob = jobs.find((j) => j.id === updatedJob.id);
     if (!originalJob) return;
 
-    // Normalizar status para minúsculas, tipo "aberta" | "fechada" | "rascunho"
     const statusLowerCase = (updatedJob.status || "").toLowerCase() as Job["status"];
 
     const updatedFullJob: Job = {
@@ -85,6 +114,8 @@ export const ManageJobs = () => {
     toast.success("Vaga duplicada com sucesso!");
     setDuplicatingJob(null);
     setTab("listagem");
+    // Atualiza a URL para aba listagem também
+    handleTabChange("listagem");
   };
 
   const requestDelete = (job: Job) => {
@@ -127,7 +158,7 @@ export const ManageJobs = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <h1 className="text-3xl font-bold mb-6">Gerir Vagas</h1>
 
-      <Tabs defaultValue={tab} value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className="flex flex-wrap gap-2">
           <TabsTrigger value="listagem" className="flex items-center gap-2">
             📋 Todas ({jobs.length})
@@ -182,7 +213,7 @@ export const ManageJobs = () => {
             ) : (
               <ul className="space-y-4">
                 {paginatedJobs.map((job) => (
-                  <JobListItem
+                  <JobListManage
                     key={job.id || job._id}
                     job={job}
                     onDelete={() => requestDelete(job)}
@@ -206,7 +237,7 @@ export const ManageJobs = () => {
         </TabsContent>
 
         <TabsContent value="criar">
-          <JobCreateForm onCreated={() => setTab("listagem")} />
+          <JobCreateForm onCreated={() => handleTabChange("listagem")} />
         </TabsContent>
       </Tabs>
 

@@ -6,6 +6,7 @@ import { CandidateProvider } from "./context/CandidateContext";
 import "./index.css";
 import { EvaluationProvider } from "./context/EvaluationContext";
 import { AuthProvider } from "./context/AuthContext";
+import { InterviewProvider } from "./context/InterviewContext";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <JobProvider>
       <CandidateProvider>
         <EvaluationProvider>
+          <InterviewProvider>
         <AppRoutes />
+          </InterviewProvider>
         </EvaluationProvider>
       </CandidateProvider>
     </JobProvider>

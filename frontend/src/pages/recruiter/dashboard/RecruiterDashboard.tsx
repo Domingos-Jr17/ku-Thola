@@ -2,11 +2,22 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { SummaryCard } from "@/components/cards/SummaryCard";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useJobContext } from "@/hooks/useJobContext";
 
 export const RecruiterDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { jobs, candidates, communication } = useDashboardData();
+  const { jobs, stats } = useJobContext();
+
+  // Cálculos derivados
+  const totalCandidatos = stats.totalCandidatos;
+  const entrevistasAgendadas = stats.totalEntrevistas;
+  const avaliacoesPendentes = stats.candidatosNovos;
+
+  // Exemplo de valores fictícios para comunicação (pode vir de outro contexto depois)
+  const communication = {
+    messages: 3,
+    notifications: 5,
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -28,9 +39,9 @@ export const RecruiterDashboard: React.FC = () => {
             Gerir Vagas
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            <SummaryCard title="Total de Vagas" value={jobs.total} color="text-blue-600" onClick={() => navigate("/rh/vagas")} />
-            <SummaryCard title="Vagas Abertas" value={jobs.open} color="text-green-600" onClick={() => navigate("/rh/vagas?status=abertas")} />
-            <SummaryCard title="Vagas Fechadas" value={jobs.closed} color="text-red-600" onClick={() => navigate("/rh/vagas?status=fechadas")} />
+            <SummaryCard title="Total de Vagas" value={jobs.length} color="text-blue-600" onClick={() => navigate("/rh/vagas")} />
+            <SummaryCard title="Vagas Abertas" value={stats.vagasAbertas} color="text-green-600" onClick={() => navigate("/rh/vagas?status=abertas")} />
+            <SummaryCard title="Vagas Fechadas" value={stats.vagasFechadas} color="text-red-600" onClick={() => navigate("/rh/vagas?status=fechadas")} />
           </div>
         </section>
 
@@ -40,9 +51,9 @@ export const RecruiterDashboard: React.FC = () => {
             Processos Seletivos
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            <SummaryCard title="Candidatos" value={candidates.total} color="text-purple-600" onClick={() => navigate("/rh/candidatos")} />
-            <SummaryCard title="Entrevistas Agendadas" value={candidates.interviews} color="text-yellow-600" onClick={() => navigate("/rh/entrevistas")} />
-            <SummaryCard title="Avaliações Pendentes" value={candidates.evaluations} color="text-orange-600" onClick={() => navigate("/rh/avaliacoes")} />
+            <SummaryCard title="Candidatos" value={totalCandidatos} color="text-purple-600" onClick={() => navigate("/rh/candidatos")} />
+            <SummaryCard title="Entrevistas Agendadas" value={entrevistasAgendadas} color="text-yellow-600" onClick={() => navigate("/rh/entrevistas")} />
+            <SummaryCard title="Avaliações Pendentes" value={avaliacoesPendentes} color="text-orange-600" onClick={() => navigate("/rh/avaliacoes")} />
           </div>
         </section>
 
@@ -66,6 +77,7 @@ export const RecruiterDashboard: React.FC = () => {
             <Button onClick={() => navigate("/rh/vagas/criar")}>Criar Nova Vaga</Button>
             <Button onClick={() => navigate("/rh/vagas")}>Ver Vagas</Button>
             <Button onClick={() => navigate("/rh/candidatos")}>Ver Candidatos</Button>
+            <Button onClick={() => navigate("/rh/candidatos/por-vaga")}>Ver Candidatos por Vagas</Button>
             <Button onClick={() => navigate("/rh/avaliacoes")}>Ver Avaliações</Button>
             <Button onClick={() => navigate("/rh/entrevistas")}>Ver Entrevistas</Button>
             <Button onClick={() => navigate("/rh/comunicacao")}>Mensagens</Button>

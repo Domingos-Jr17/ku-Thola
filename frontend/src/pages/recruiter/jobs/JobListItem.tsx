@@ -1,59 +1,56 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { pt } from "date-fns/locale";
 import { Button } from "@/components/ui/Button";
 import { useJobContext } from "@/hooks/useJobContext";
-import { formatDatePt } from "@/utils/format";
 
-interface Job {
-  _id: string;
-  title: string;
-  department: string;
-  type: string;
-  expirationDate: string;
- status?: "aberta" | "fechada" | "rascunho";
-}
-
-interface Props {
-  job: Job;
-}
-
-export const JobListItem: React.FC<Props> = ({ job }) => {
+export const JobListItem: React.FC = () => {
+  const { jobs } = useJobContext();
   const navigate = useNavigate();
-  const { deleteJob } = useJobContext();
 
-  const handleDelete = () => {
-    const confirmed = window.confirm(`Tem certeza que deseja eliminar a vaga "${job.title}"?`);
-    if (confirmed) {
-      deleteJob(job._id);
-    }
-  };
+  const vagasVisiveis = jobs.filter((job) => job.status === "aberta");
 
   return (
-    <li className="bg-white p-5 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-        <p className="text-sm text-gray-600">
-          {job.department} · {job.type}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Expira em: <span className="font-medium">{formatDatePt(job.expirationDate)}</span>
-        </p>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">Candidaturas por Vaga</h2>
 
-        {job.status && (
-          <span
-            className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-semibold
-              ${job.status === "aberta" ? "bg-green-100 text-green-700" : job.status === "fechada" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}
-          >
-            {job.status === "aberta" ? "Aberta" : job.status === "fechada" ? "Fechada" : "Rascunho"}
-          </span>
-        )}
-      </div>
+      {vagasVisiveis.length === 0 ? (
+        <p className="text-gray-600">Nenhuma vaga disponível para candidaturas.</p>
+      ) : (
+        <ul className="space-y-4">
+          {vagasVisiveis.map((job) => {
+            const diasRestantes = formatDistanceToNow(new Date(job.expirationDate), {
+              addSuffix: true,
+              locale: pt,
+            });
 
-      <div className="flex gap-2">
-        <Button onClick={() => navigate(`/rh/vagas/${job._id}`)}>Ver Detalhes</Button>
-        <Button onClick={() => navigate(`/rh/vagas/${job._id}/candidatos`)}> Ver Candidatos </Button>
-        <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
-      </div>
-    </li>
+            return (
+              <li
+                key={job.id}
+                className="bg-white rounded-lg shadow-md p-5 flex flex-col md:flex-row justify-between md:items-center gap-4"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                  <p className="text-sm text-gray-600">
+                    {job.department} · {job.type} · {job.location}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Expira {diasRestantes} — <span className="font-medium">{job.candidateCount} candidatos</span>
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => navigate(`/rh/vagas/${job.id}/candidaturas`)}
+                  className="w-full md:w-auto"
+                >
+                  Ver Candidatos
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 };

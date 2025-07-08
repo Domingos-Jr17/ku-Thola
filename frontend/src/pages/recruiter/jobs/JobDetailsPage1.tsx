@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
 import { ScheduleInterviewModal } from "@/components/cards/forms/ScheduleInterviewModal";
 import { useJobDetails } from "@/hooks/useJobDetails";
-import { CandidateCard } from "@/components/cards/CandidateCard";
+import { CandidateCard } from "@/components/cards/Candidatecard";
 import { InterviewItem } from "@/components/InterviewItem";
 
 export const JobDetailsPage = () => {
@@ -30,14 +30,23 @@ export const JobDetailsPage = () => {
     );
   }
 
+  const candidatosAvaliados = job.candidatos.filter((c) => c.avaliado);
+  const candidatosNaoAvaliados = job.candidatos.filter((c) => !c.avaliado);
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Vaga: {job.title}</h1>
 
       <div className="bg-white p-4 shadow rounded-lg mb-6">
-        <p><strong>Status:</strong> {job.status}</p>
-        <p><strong>Local:</strong> {job.local}</p>
-        <p><strong>Data de criação:</strong> {job.dataCriacao}</p>
+        <p>
+          <strong>Status:</strong> {job.status}
+        </p>
+        <p>
+          <strong>Local:</strong> {job.local}
+        </p>
+        <p>
+          <strong>Data de criação:</strong> {job.dataCriacao}
+        </p>
         <p className="mt-2 text-gray-700 whitespace-pre-line">{job.descricao}</p>
         {job.status === "aberta" && (
           <Button className="mt-4" variant="destructive" onClick={handleFecharCandidaturas}>
@@ -50,18 +59,20 @@ export const JobDetailsPage = () => {
         <TabsList>
           <TabsTrigger value="candidatos">Candidatos</TabsTrigger>
           <TabsTrigger value="entrevistas">Entrevistas</TabsTrigger>
-          <TabsTrigger value=" Avaliações"> Avaliações</TabsTrigger>
+          <TabsTrigger value="avaliacoes">Avaliações</TabsTrigger>
         </TabsList>
 
+        {/* Candidatos não avaliados */}
         <TabsContent value="candidatos">
-          {job.candidatos.length === 0 ? (
-            <p className="text-gray-600">Nenhum candidato ainda.</p>
+          {candidatosNaoAvaliados.length === 0 ? (
+            <p className="text-gray-600">Nenhum candidato pendente de avaliação.</p>
           ) : (
             <ul className="space-y-4">
-              {job.candidatos.map(cand => (
+              {candidatosNaoAvaliados.map((cand) => (
                 <CandidateCard
                   key={cand.id}
                   candidate={cand}
+                  jobRequirements={job.requirements}
                   onAvaliar={() => handleAvaliar(cand.id)}
                   onAgendar={() => openScheduleModal(cand.id, cand.nome)}
                 />
@@ -70,33 +81,48 @@ export const JobDetailsPage = () => {
           )}
         </TabsContent>
 
+        {/* Entrevistas */}
         <TabsContent value="entrevistas">
           {job.entrevistas.length === 0 ? (
-            <p className="text-gray-600">Nenhuma entrevista.</p>
+            <p className="text-gray-600">Nenhuma entrevista agendada.</p>
           ) : (
             <ul className="space-y-3">
-              {job.entrevistas.map(int => (
+              {job.entrevistas.map((int) => (
                 <InterviewItem key={int.id} interview={int} />
               ))}
             </ul>
           )}
         </TabsContent>
 
-        <TabsContent value="feedbacks">
-          <p className="text-gray-600">Funcionalidade em construção.</p>
+        {/* Candidatos Avaliados */}
+        <TabsContent value="avaliacoes">
+          {candidatosAvaliados.length === 0 ? (
+            <p className="text-gray-600">Nenhum candidato avaliado ainda.</p>
+          ) : (
+            <ul className="space-y-4">
+              {candidatosAvaliados.map((cand) => (
+                <CandidateCard
+                  key={cand.id}
+                  candidate={cand}
+                  jobRequirements={job.requirements}
+                  onAgendar={() => openScheduleModal(cand.id, cand.nome)}
+                  onAvaliar={() => handleAvaliar(cand.id)}
+                />
+              ))}
+            </ul>
+          )}
         </TabsContent>
       </Tabs>
 
-    <ScheduleInterviewModal
-  isOpen={modalOpen}
-  onClose={() => setModalOpen(false)}
-  onSubmit={handleScheduleSubmit}
-  candidateName={selectedCandidate?.nome || ""}
-  initialDate={""}
-  initialTime={""}
-  initialMethod={"Presencial"}
-  />
-           
+      <ScheduleInterviewModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleScheduleSubmit}
+        candidateName={selectedCandidate?.nome || ""}
+        initialDate={""}
+        initialTime={""}
+        initialMethod={"Presencial"}
+      />
     </div>
   );
 };

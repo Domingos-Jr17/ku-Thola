@@ -2,44 +2,43 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { InterviewModal } from "@/components/ui/InterviewModal";
 import { useInterview } from "@/hooks/useInterview";
+import { useJobContext } from "@/hooks/useJobContext";
+
 
 export const CandidateInterview = () => {
-  const { id } = useParams<{ id: string }>();
+  const { jobId, candidateId } = useParams<{ jobId: string; candidateId: string }>();
   const navigate = useNavigate();
-
   const [isModalOpen, setIsModalOpen] = useState(true);
   const [submitted, setSubmitted] = useState(false);
 
   const { addInterview } = useInterview();
+  const { getJobById } = useJobContext();
+
+  const job = getJobById(jobId);
+  const candidate = job?.candidatos.find((c: { id: string | undefined; }) => c.id === candidateId);
 
   const handleClose = () => {
     setIsModalOpen(false);
-    navigate(`/rh/candidato/${id}`);
+    navigate(`/rh/vaga/${jobId}/candidato/${candidateId}`);
   };
 
   const handleConfirm = (data: { date: string; link: string; notes: string }) => {
-    if (!id) return;
-
-    // Aqui você pode complementar os dados do candidato se tiver acesso
-    // ou buscar via contexto/estado global para preencher nome, email, etc.
+    if (!candidate || !job) return;
 
     const newInterview = {
-      id: `int-${Date.now()}`, // gera um id único simples
-      candidateId: id,
-      name: "",     // Ideal preencher com o nome do candidato
-      email: "",    // Ideal preencher com email do candidato
-      jobTitle: "", // Pode ser informado também
-      method: undefined, // Se tiver o método da entrevista (presencial, online...)
+      id: `int-${Date.now()}`,
+      candidateId: candidate.id,
+      name: candidate.nome,
+      email: candidate.email ?? "",
+      jobTitle: job.title,
+      method: job.type,
       ...data,
     };
 
     addInterview(newInterview);
-
     setSubmitted(true);
-
-    // Depois de 1.5s, volta para perfil do candidato
     setTimeout(() => {
-      navigate(`/rh/candidato/${id}`);
+      navigate(`/rh/vaga/${jobId}/candidato/${candidateId}`);
     }, 1500);
   };
 
@@ -59,3 +58,4 @@ export const CandidateInterview = () => {
     </div>
   );
 };
+

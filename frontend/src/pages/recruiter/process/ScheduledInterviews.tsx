@@ -1,82 +1,84 @@
-import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/Button";
+import { useState, useMemo, useContext } from "react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import { Button } from "@/components/ui/Button";
+import { JobContext, type Interview } from "@/context/jobsContext";
 import { ScheduleInterviewModal } from "@/components/cards/forms/ScheduleInterviewModal";
 
-interface Interview {
-  id: number;
-  candidateName: string;
-  jobTitle: string;
-  date: string;
-  time: string;
-  method: "Presencial" | "Zoom" | "Google Meet";
-  status: "Confirmada" | "Pendente";
+const validMethods = ["Presencial", "Zoom", "Google Meet"] as const;
+type InterviewMethod = typeof validMethods[number];
+
+function normalizeMethod(method: string | undefined): InterviewMethod {
+  if (method && validMethods.includes(method as InterviewMethod)) {
+    return method as InterviewMethod;
+  }
+  return "Presencial"; // valor padrão
 }
 
-const mockInterviews: Interview[] = [
-  {
-    id: 1,
-    candidateName: "Albertina Dlambe",
-    jobTitle: "Desenvolvedor Frontend",
-    date: "2025-07-05",
-    time: "10:00",
-    method: "Zoom",
-    status: "Confirmada",
-  },
-  {
-    id: 2,
-    candidateName: "Domingos A. Timane Jr",
-    jobTitle: "Desenvolvedor Frontend",
-    date: "2025-07-06",
-    time: "14:30",
-    method: "Presencial",
-    status: "Pendente",
-  },
-];
+type InterviewWithJob = Interview & {
+  jobId: string;
+  jobTitle: string;
+  status?: "Confirmada" | "Pendente";
+  time?: string;
+  method?: InterviewMethod;
+};
+
+const STATUS_OPTIONS = ["Todos", "Confirmada", "Pendente"] as const;
+type StatusFilter = typeof STATUS_OPTIONS[number];
 
 export const ScheduledInterviews = () => {
-  // Estados
-  const [interviews, setInterviews] = useState<Interview[]>(mockInterviews);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
+  const jobContext = useContext(JobContext);
 
-  // Filtros e paginação
+  if (!jobContext) {
+    throw new Error("ScheduledInterviews deve estar dentro do JobProvider");
+  }
+
+  const { jobs, agendarEntrevista, deleteInterview } = jobContext;
+
+  // Extrai e normaliza o método das entrevistas
+  const allInterviews: InterviewWithJob[] = useMemo(() => {
+    return jobs.flatMap((job) =>
+      job.entrevistas.map((interview) => ({
+        ...interview,
+        jobId: job.id,
+        jobTitle: job.title,
+        method: normalizeMethod(interview.method),
+      }))
+    );
+  }, [jobs]);
+
   const [searchName, setSearchName] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"Todos" | "Confirmada" | "Pendente">("Todos");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Todos");
   const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 2;
+  const ITEMS_PER_PAGE = 5;
 
-  // Filtragem dos dados
   const filteredInterviews = useMemo(() => {
-    return interviews.filter((int) => {
-      const matchesName = int.candidateName.toLowerCase().includes(searchName.toLowerCase());
-      const matchesStatus = statusFilter === "Todos" || int.status === statusFilter;
-      return matchesName && matchesStatus;
+    return allInterviews.filter(({ name, status }) => {
+      const nameMatch = name.toLowerCase().includes(searchName.toLowerCase());
+      const statusMatch = statusFilter === "Todos" || status === statusFilter;
+      return nameMatch && statusMatch;
     });
-  }, [interviews, searchName, statusFilter]);
+  }, [allInterviews, searchName, statusFilter]);
 
-  // Paginação
-  const totalPages = Math.ceil(filteredInterviews.length / ITEMS_PER_PAGE);
-  const paginatedInterviews = filteredInterviews.slice(
+  const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / ITEMS_PER_PAGE));
+
+  const paginated = filteredInterviews.slice(
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE
   );
 
-  // Manipulação de paginação
-  const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    setPage(newPage);
-  };
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedInterview, setSelectedInterview] = useState<InterviewWithJob | null>(null);
 
-  // Ações
-  const handleCancel = (id: number) => {
+  const handleCancel = (interviewId: string, jobId: string) => {
     if (window.confirm("Tem certeza que deseja cancelar esta entrevista?")) {
-      setInterviews(interviews.filter((int) => int.id !== id));
+      if (deleteInterview) {
+        deleteInterview(jobId, interviewId);
+      }
     }
   };
 
-  const handleOpenReschedule = (interview: Interview) => {
+  const handleOpenReschedule = (interview: InterviewWithJob) => {
     setSelectedInterview(interview);
     setModalOpen(true);
   };
@@ -84,14 +86,18 @@ export const ScheduledInterviews = () => {
   const handleRescheduleConfirm = (
     date: string,
     time: string,
-    method: "Presencial" | "Zoom" | "Google Meet"
+    method: InterviewMethod
   ) => {
     if (!selectedInterview) return;
-    setInterviews((prev) =>
-      prev.map((int) =>
-        int.id === selectedInterview.id ? { ...int, date, time, method } : int
-      )
-    );
+
+    const updatedInterview: Interview = {
+      ...selectedInterview,
+      date,
+      time,
+      method,
+    };
+
+    agendarEntrevista(selectedInterview.jobId, updatedInterview);
     setModalOpen(false);
     setSelectedInterview(null);
   };
@@ -100,10 +106,9 @@ export const ScheduledInterviews = () => {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Entrevistas Agendadas</h1>
 
-      {/* Filtros */}
       <div className="mb-4 flex flex-wrap gap-4 items-center">
         <input
-          type="text"
+          type="search"
           placeholder="Buscar por candidato"
           value={searchName}
           onChange={(e) => {
@@ -111,99 +116,106 @@ export const ScheduledInterviews = () => {
             setPage(1);
           }}
           className="border border-gray-300 rounded px-3 py-2 flex-grow min-w-[200px]"
+          aria-label="Buscar entrevistas por nome do candidato"
         />
         <select
           value={statusFilter}
           onChange={(e) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setStatusFilter(e.target.value as any);
+            setStatusFilter(e.target.value as StatusFilter);
             setPage(1);
           }}
           className="border border-gray-300 rounded px-3 py-2"
+          aria-label="Filtrar entrevistas por status"
         >
-          <option value="Todos">Todos</option>
-          <option value="Confirmada">Confirmada</option>
-          <option value="Pendente">Pendente</option>
+          {STATUS_OPTIONS.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Lista */}
-      {paginatedInterviews.length === 0 ? (
+      {paginated.length === 0 ? (
         <p className="text-gray-600">Nenhuma entrevista encontrada.</p>
       ) : (
-        <div className="space-y-4">
-          {paginatedInterviews.map((interview) => (
-            <div
-              key={interview.id}
-              className="bg-white shadow-md p-4 rounded border-l-4 border-blue-600"
+        <div className="space-y-4" role="list">
+          {paginated.map((int) => (
+            <article
+              key={int.id}
+              className="bg-white shadow p-4 rounded border-l-4 border-blue-600"
+              role="listitem"
+              aria-label={`Entrevista com ${int.name} para a vaga ${int.jobTitle}, status ${int.status ?? "Indefinido"}`}
             >
-              <h2 className="text-lg font-semibold text-gray-800">
-                {interview.candidateName}
-              </h2>
-              <p className="text-sm text-gray-600">{interview.jobTitle}</p>
+              <h2 className="text-lg font-semibold text-gray-800">{int.name}</h2>
+              <p className="text-sm text-gray-600">{int.jobTitle}</p>
               <p className="text-sm mt-1">
                 <strong>Data:</strong>{" "}
-                {format(new Date(interview.date), "dd 'de' MMMM 'de' yyyy", {
-                  locale: pt,
-                })}
+                {format(new Date(int.date), "dd 'de' MMMM 'de' yyyy", { locale: pt })}
               </p>
-              <p className="text-sm">
-                <strong>Hora:</strong> {interview.time}
-              </p>
-              <p className="text-sm">
-                <strong>Via:</strong> {interview.method}
-              </p>
-              <p
-                className={`text-sm font-medium mt-1 ${
-                  interview.status === "Confirmada"
-                    ? "text-green-600"
-                    : "text-yellow-500"
-                }`}
-              >
-                {interview.status}
-              </p>
+              {int.time && (
+                <p className="text-sm">
+                  <strong>Hora:</strong> {int.time}
+                </p>
+              )}
+              {int.method && (
+                <p className="text-sm">
+                  <strong>Via:</strong> {int.method}
+                </p>
+              )}
+              {int.status && (
+                <p
+                  className={`text-sm font-medium mt-1 ${
+                    int.status === "Confirmada" ? "text-green-600" : "text-yellow-600"
+                  }`}
+                >
+                  {int.status}
+                </p>
+              )}
 
               <div className="mt-4 flex gap-2">
-                <Button onClick={() => handleOpenReschedule(interview)}>
-                  Reagendar
-                </Button>
+                <Button onClick={() => handleOpenReschedule(int)}>Reagendar</Button>
                 <Button
-                  onClick={() => handleCancel(interview.id)}
+                  onClick={() => handleCancel(int.id, int.jobId)}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   Cancelar
                 </Button>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
 
-      {/* Paginação */}
       {totalPages > 1 && (
-        <div className="mt-4 flex justify-center gap-2">
-          <Button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
+        <nav className="mt-4 flex justify-center gap-2" aria-label="Paginação das entrevistas">
+          <Button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
             Anterior
           </Button>
-          <span className="px-4 py-2 bg-gray-200 rounded">
+          <span className="px-4 py-2 bg-gray-200 rounded" aria-live="polite" aria-atomic="true">
             {page} / {totalPages}
           </span>
-          <Button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
-            Próximo
+          <Button
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page === totalPages}
+          >
+            Próxima
           </Button>
-        </div>
+        </nav>
       )}
 
-      {/* Modal Reagendamento */}
-     <ScheduleInterviewModal
-  isOpen={modalOpen}
-  onClose={() => setModalOpen(false)}
-  onSubmit={handleRescheduleConfirm}
-  initialDate={selectedInterview?.date || ""}
-  initialTime={selectedInterview?.time || ""}
-  initialMethod={selectedInterview?.method || "Presencial"}
-  candidateName={""}
-/>
+      <ScheduleInterviewModal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedInterview(null);
+        }}
+        onSubmit={handleRescheduleConfirm}
+        initialDate={selectedInterview?.date ?? ""}
+        initialTime={selectedInterview?.time ?? ""}
+        initialMethod={selectedInterview?.method ?? "Presencial"}
+        candidateName={selectedInterview?.name ?? ""}
+        isRescheduling
+      />
     </div>
   );
 };
